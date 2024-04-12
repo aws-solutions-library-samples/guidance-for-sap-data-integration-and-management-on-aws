@@ -181,13 +181,13 @@ def _result_to_output(data, data_err, field_name, field_data, err_count):
         
     if fileFormat == 'json':
         out_buffer = io.StringIO()
-        pd_result.to_json(out_buffer,orient = 'records')
+        pd_result.to_json(out_buffer,orient = 'records',lines=True)
         
         ### rows have delimiter errors
         if err_count > 0:
             pd_result_err = pd.DataFrame(data_err)
             out_buffer_err = io.StringIO()
-            pd_result_err.to_json(out_buffer,orient = 'records')
+            pd_result_err.to_json(out_buffer_err,orient = 'records',lines=True)
             
     elif fileFormat == 'parquet':
         pd_table = pa.Table.from_pandas(pd_result)
