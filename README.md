@@ -13,11 +13,19 @@ To access SAP via RFC from AWS Glue, the [PyRFC](https://github.com/SAP/PyRFC) l
 To begin, download the [SAP NW RFC SDK](https://launchpad.support.sap.com/#/softwarecenter/template/products/_APP=00200682500000001943&_EVENT=DISPHIER&HEADER=Y&FUNCTIONBAR=N&EVENT=TREE&NE=NAVIGATE&ENR=01200314690100002214&V=MAINT)
 → "LINUX ON X86_64 64BIT" from SAP Download Center to your local disk (requires SAP S-User). The latest patch level at the time this workshop is created is 12.
 
-![1.nwrfcdownload](./GuidanceImage/1.nwrfcdownload.png)
+<<<<<<< HEAD
+![1.nwrfcdownload](./guidanceImage/1.nwrfcdownload.png)
 
 Access your AWS Cloud9 Studio, Upload the downloaded zip file your AWS Cloud9 environment. The zip file will placed in the folder as bellow.
 
-![1.cloud9uploadnwrfc](./GuidanceImage/1.cloud9uploadnwrfc.png)
+![1.cloud9uploadnwrfc](./guidanceImage/1.cloud9uploadnwrfc.png)
+=======
+![1.nwrfcdownload](./guidanceImage/1.nwrfcdownload.png)
+
+Access your AWS Cloud9 Studio, Upload the downloaded zip file your AWS Cloud9 environment. The zip file will placed in the folder as bellow.
+
+![1.cloud9uploadnwrfc](./guidanceImage/1.cloud9uploadnwrfc.png)
+>>>>>>> sejun
 
 Extract all files by executing the following statements in your Cloud9 terminal.  
 
@@ -30,11 +38,19 @@ cd gluerfcbuild
 
 The result should look as follows: 
 
+<<<<<<< HEAD
 ![1.gluerfcbuildunzip](./GuidanceImage/1.gluerfcbuildunzip.png)
 
 Move to gluerfcbuild folder as the next commands need to be run inside this folder.
 
 ![1.gluerfcbuildfolder](./GuidanceImage/1.gluerfcbuildfolder.png)
+=======
+![1.gluerfcbuildunzip](./guidanceImage/1.gluerfcbuildunzip.png)
+
+Move to gluerfcbuild folder as the next commands need to be run inside this folder.
+
+![1.gluerfcbuildfolder](./guidanceImage/1.gluerfcbuildfolder.png)
+>>>>>>> sejun
 
 Download the following docker file template from github to build the external library. You can also manually download the **glue-pyrfc-docker** file from **glue_external_lib** folder from [Github repository](https://github.com/aws-samples/aws-sap-gluerfc/blob/main/glue_external_lib/glue-pyrfc-docker), then manually upload to your Cloud9 environment.
 Commands in the docker file shall be used without modification.
