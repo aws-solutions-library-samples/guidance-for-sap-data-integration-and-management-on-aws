@@ -51,7 +51,7 @@ dataS3file_err = tableName+"-err"+"."+fileFormat
 
 
 # ---------------------------------
-# 3.1 Function - Call RFC Function
+# 3.1 Function - Main Function
 # ---------------------------------
 
 def call_rfc_function():
