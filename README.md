@@ -20,13 +20,6 @@ Access your AWS Cloud9 Studio, Upload the downloaded zip file your AWS Cloud9 en
 
 ![1.cloud9uploadnwrfc](./guidanceImage/1.cloud9uploadnwrfc.png)
 
-![1.nwrfcdownload](./guidanceImage/1.nwrfcdownload.png)
-
-Access your AWS Cloud9 Studio, Upload the downloaded zip file your AWS Cloud9 environment. The zip file will placed in the folder as bellow.
-
-![1.cloud9uploadnwrfc](./guidanceImage/1.cloud9uploadnwrfc.png)
-
-
 Extract all files by executing the following statements in your Cloud9 terminal.  
 
 ```bash
@@ -44,13 +37,6 @@ The result should look as follows:
 Move to gluerfcbuild folder as the next commands need to be run inside this folder.
 
 ![1.gluerfcbuildfolder](./guidanceImage/1.gluerfcbuildfolder.png)
-
-![1.gluerfcbuildunzip](./guidanceImage/1.gluerfcbuildunzip.png)
-
-Move to gluerfcbuild folder as the next commands need to be run inside this folder.
-
-![1.gluerfcbuildfolder](./guidanceImage/1.gluerfcbuildfolder.png)
-
 
 Download the following docker file template from github to build the external library. You can also manually download the **glue-pyrfc-docker** file from **glue_external_lib** folder from [Github repository](https://github.com/aws-samples/aws-sap-gluerfc/blob/main/glue_external_lib/glue-pyrfc-docker), then manually upload to your Cloud9 environment.
 Commands in the docker file shall be used without modification.
