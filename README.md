@@ -1,6 +1,10 @@
 # SAP RFC to S3 using AWS Glue
 
-In this lab, you will learn how to perform a SAP Remote Function Call (RFC) via AWS Glue and store the output in Amazon S3. For ease of use, we will be using [AWS Cloud9](https://catalog.us-east-1.prod.workshops.aws/workshops/79435b9d-cf2e-4afc-a3f6-4eceeaf0865d/en-US/aws-devops/200-sap-cicd-cf/211-aws-cloud9) as IDE.
+In this lab, you will learn how to perform a SAP Remote Function Call (RFC) via AWS Glue and store the output in Amazon S3. The architecture will be as following.
+
+![0.gluepyrfcarchitecture](./GuidanceImage/0.gluepyrfcarchitecture.png)
+
+For ease of use, we will be using [AWS Cloud9](https://catalog.us-east-1.prod.workshops.aws/workshops/79435b9d-cf2e-4afc-a3f6-4eceeaf0865d/en-US/aws-devops/200-sap-cicd-cf/211-aws-cloud9) as IDE.
 Please make sure to:
 * Create your [AWS Cloud9](https://catalog.us-east-1.prod.workshops.aws/workshops/79435b9d-cf2e-4afc-a3f6-4eceeaf0865d/en-US/aws-devops/200-sap-cicd-cf/211-aws-cloud9) environment before starting the workshop.
 * The docker image will take about 2~3GB disk size. So please make sure your Cloud9 environment has enough storage size. 
@@ -13,12 +17,11 @@ To access SAP via RFC from AWS Glue, the [PyRFC](https://github.com/SAP/PyRFC) l
 To begin, download the [SAP NW RFC SDK](https://launchpad.support.sap.com/#/softwarecenter/template/products/_APP=00200682500000001943&_EVENT=DISPHIER&HEADER=Y&FUNCTIONBAR=N&EVENT=TREE&NE=NAVIGATE&ENR=01200314690100002214&V=MAINT)
 → "LINUX ON X86_64 64BIT" from SAP Download Center to your local disk (requires SAP S-User). The latest patch level at the time this workshop is created is 12.
 
-
-![1.nwrfcdownload](./guidanceImage/1.nwrfcdownload.png)
+![1.nwrfcdownload](./GuidanceImage/1.nwrfcdownload.png)
 
 Access your AWS Cloud9 Studio, Upload the downloaded zip file your AWS Cloud9 environment. The zip file will placed in the folder as bellow.
 
-![1.cloud9uploadnwrfc](./guidanceImage/1.cloud9uploadnwrfc.png)
+![1.cloud9uploadnwrfc](./GuidanceImage/1.cloud9uploadnwrfc.png)
 
 Extract all files by executing the following statements in your Cloud9 terminal.  
 
@@ -31,12 +34,11 @@ cd gluerfcbuild
 
 The result should look as follows: 
 
-
-![1.gluerfcbuildunzip](./guidanceImage/1.gluerfcbuildunzip.png)
+![1.gluerfcbuildunzip](./GuidanceImage/1.gluerfcbuildunzip.png)
 
 Move to gluerfcbuild folder as the next commands need to be run inside this folder.
 
-![1.gluerfcbuildfolder](./guidanceImage/1.gluerfcbuildfolder.png)
+![1.gluerfcbuildfolder](./GuidanceImage/1.gluerfcbuildfolder.png)
 
 Download the following docker file template from github to build the external library. You can also manually download the **glue-pyrfc-docker** file from **glue_external_lib** folder from [Github repository](https://github.com/aws-samples/aws-sap-gluerfc/blob/main/glue_external_lib/glue-pyrfc-docker), then manually upload to your Cloud9 environment.
 Commands in the docker file shall be used without modification.
@@ -52,7 +54,7 @@ docker build -f glue-pyrfc-docker .
 
 After build is complete, an output message will be displayed with an image ID. 
 
-![1.dockerbuild](./guidanceImage/1.dockerbuild.png)
+![1.dockerbuild](./GuidanceImage/1.dockerbuild.png)
 
 You can confirm the image ID with this command:
 ```bash
@@ -61,7 +63,7 @@ docker image ls
 
 Note the image ID generated. For Example: **1cf8a169e460**
 
-![1.dockerimagels](./guidanceImage/1.dockerimagels.png)
+![1.dockerimagels](./GuidanceImage/1.dockerimagels.png)
 
 Run the container (Note: Use your own individual **ImageID** after the build) 
 ```bash
@@ -74,14 +76,14 @@ Get the container ID by this command
 # Get the ContainerID 
 docker ps
 ```
-![1.dockerps](./guidanceImage/1.dockerps.png)
+![1.dockerps](./GuidanceImage/1.dockerps.png)
 
 Confirm the .whl file name inside Container wheel directory by this command
 ```bash
 # Fill your Container ID in the command. Ex: c16a55b1d8ee
 docker exec <Container ID> ls -al /root/wheel_dir
 ```
-![1.dockerexecls](./guidanceImage/1.dockerexecls.png)
+![1.dockerexecls](./GuidanceImage/1.dockerexecls.png)
 
 Copy the .whl file with file name started with pyrfc- built from Container to Cloud9 folder. We will use this file later to upload to S3.
 ```bash
@@ -89,20 +91,20 @@ Copy the .whl file with file name started with pyrfc- built from Container to Cl
 # and re-confirm the pyrfc file name again to match with your container
 docker cp <Container ID>:/root/wheel_dir/pyrfc-2.8.31-cp37-cp37m-linux_x86_64.whl .
 ```
-![1.dockercp](./guidanceImage/1.dockercp.png)
+![1.dockercp](./GuidanceImage/1.dockercp.png)
 
 Use the following command to upload the created **.whl** file to Amazon S3. Note: Modify the **file name, bucket name** and **folder name** according to your environment! 
 ```bash
 aws s3 cp pyrfc-2.8.31-cp37-cp37m-linux_x86_64.whl s3://<bucket name>/<folder name>/
 ```
-![1.s3cp](./guidanceImage/1.s3cp.png)
+![1.s3cp](./GuidanceImage/1.s3cp.png)
 
-![1.s3bucketwhlfile](./guidanceImage/1.s3bucketwhlfile.png)
+![1.s3bucketwhlfile](./GuidanceImage/1.s3bucketwhlfile.png)
 
 ## 2. Create Secrets Manager to save SAP connection information securely
 Access [Secret Manager](https://ap-northeast-1.console.aws.amazon.com/secretsmanager/landing?region=ap-northeast-1) service and click **Store a new secret** .
 
-![2.newsecret](./guidanceImage/2.newsecret.png)
+![2.newsecret](./GuidanceImage/2.newsecret.png)
 
 Choose **Secret type** = **Other type of secret**. In Key/value pairs session, input SAP connection information.
 Remember to type your own system information here.
@@ -113,14 +115,14 @@ Remember to type your own system information here.
 - user: User to login to SAP
 - passwd: password to login to SAP
 
-![2.secretvalues](./guidanceImage/2.secretvalues.png)
+![2.secretvalues](./GuidanceImage/2.secretvalues.png)
 
 In the **Next** screen, define **Secret Name**.
 In the **Next** screen, leave all fields as default and finally click **Store secret**.
 
-![2.configuresecret](./guidanceImage/2.configuresecret.png)
+![2.configuresecret](./GuidanceImage/2.configuresecret.png)
 
-![2.reviewsecret](./guidanceImage/2.reviewsecret.png)
+![2.reviewsecret](./GuidanceImage/2.reviewsecret.png)
 
 ## 3. Create AWS Glue job
 
@@ -136,25 +138,25 @@ To access your SAP system in a particular existing VPC, create a new **connectio
     * Security Group : < ... > 
 
 
-![3.gluecreateconnection](./guidanceImage/3.gluecreateconnection.png)
+![3.gluecreateconnection](./GuidanceImage/3.gluecreateconnection.png)
 
-![3.gluenetworkconnection](./guidanceImage/3.gluenetworkconnection.png)
+![3.gluenetworkconnection](./GuidanceImage/3.gluenetworkconnection.png)
 
-![3.gluenetworkconnectionname](./guidanceImage/3.gluenetworkconnectionname.png)
+![3.gluenetworkconnectionname](./GuidanceImage/3.gluenetworkconnectionname.png)
 
-![3.glueconnectiondetails](./guidanceImage/3.glueconnectiondetails.png)
+![3.glueconnectiondetails](./GuidanceImage/3.glueconnectiondetails.png)
 
-![3.glueconnectionreview](./guidanceImage/3.glueconnectionreview.png)
+![3.glueconnectionreview](./GuidanceImage/3.glueconnectionreview.png)
 
-![3.gluesapvpcconnectorconfirm](./guidanceImage/3.gluesapvpcconnectorconfirm.png)
+![3.gluesapvpcconnectorconfirm](./GuidanceImage/3.gluesapvpcconnectorconfirm.png)
 
 After create your VPC Connection, Goto **ETL Jobs** in the Menu, choose **Script editor**
 
-![3.gluejobnewjob](./guidanceImage/3.gluejobnewjob.png)
+![3.gluejobnewjob](./GuidanceImage/3.gluejobnewjob.png)
 
 Choose **Spark** Engine, and click **Create script**.
 
-![3.gluejobselectengine](./guidanceImage/3.gluejobselectengine.png)
+![3.gluejobselectengine](./GuidanceImage/3.gluejobselectengine.png)
 
 In the Editor screen, define **Job name**, and Copy the code from **pyrfc_read_table.py** inside folder **pyrfc_read_table** in the [Github repository](https://github.com/aws-samples/aws-sap-gluerfc/blob/main/pyrfc_read_table/pyrfc_read_table.py) to the script window.
 For your reference, **pyrfc_read_table.py** code logic is as follow:
@@ -179,7 +181,7 @@ For your reference, **pyrfc_read_table.py** code logic is as follow:
 
 Please make sure modify the parameters that as marked as **#Adjust** for Secret Manager name, region, S3 bucket name, Table.
 
-![3.gluejobscript](./guidanceImage/3.gluejobscript.png)
+![3.gluejobscript](./GuidanceImage/3.gluejobscript.png)
 
 Next, click on the Job details tab, to specify connection, IAM Role and Job parameter to pass the external Library as follows:
 
@@ -187,7 +189,7 @@ Next, click on the Job details tab, to specify connection, IAM Role and Job para
 * IAM Role: < Glue role with required permissions > (cf. Create an IAM role for AWS Glue )
     * This should include access to Amazon S3 and **SecretsManagerReadWrite**
 
-    ![3.gluejobiamrole](./guidanceImage/3.gluejobiamrole.png)
+    ![3.gluejobiamrole](./GuidanceImage/3.gluejobiamrole.png)
 
 * Glue version: Glue 3.0
 * Advanced properties are as following. Please confirm and adjust .whl file name to match with your environment if necessary.
@@ -196,15 +198,15 @@ Next, click on the Job details tab, to specify connection, IAM Role and Job para
     * Key: --additional-python-modules
     * Value: s3://< bucket name >/< folder name >/**pyrfc-2.8.31-cp37-cp37m-linux_x86_64.whl**
 
-    ![3.gluejobparameters](./guidanceImage/3.gluejobparameters.png)
+    ![3.gluejobparameters](./GuidanceImage/3.gluejobparameters.png)
 
 Click **Save** to create the job and now you can **Run** the job
 
-![3.gluejobsaveandrun](./guidanceImage/3.gluejobsaveandrun.png)
+![3.gluejobsaveandrun](./GuidanceImage/3.gluejobsaveandrun.png)
 
 Finally, navigate to your Amazon S3 bucket and validate the extracted file. 
 
-![3.s3extracteddata](./guidanceImage/3.s3extracteddata.png)
+![3.s3extracteddata](./GuidanceImage/3.s3extracteddata.png)
 
 ## 
 
