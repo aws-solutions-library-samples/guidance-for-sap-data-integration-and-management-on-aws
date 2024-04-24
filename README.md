@@ -2,7 +2,7 @@
 
 In this lab, you will learn how to perform a SAP Remote Function Call (RFC) via AWS Glue and store the output in Amazon S3. The architecture will be as following.
 
-![0.gluepyrfcarchitecture](./GuidanceImage/0.gluepyrfcarchitecture.png)
+![0.gluepyrfcarchitecture](./guidanceImage/0.gluepyrfcarchitecture.png)
 
 For ease of use, we will be using [AWS Cloud9](https://catalog.us-east-1.prod.workshops.aws/workshops/79435b9d-cf2e-4afc-a3f6-4eceeaf0865d/en-US/aws-devops/200-sap-cicd-cf/211-aws-cloud9) as IDE.
 Please make sure to:
