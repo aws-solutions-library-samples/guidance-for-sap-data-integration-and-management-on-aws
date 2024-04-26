@@ -85,17 +85,17 @@ docker exec <Container ID> ls -al /root/wheel_dir
 ```
 ![1.dockerexecls](./guidanceImage/1.dockerexecls.png)
 
-Copy the .whl file with file name started with pyrfc- built from Container to Cloud9 folder. We will use this file later to upload to S3.
+Copy wheel_dir folder that contain the .whl file with file name started with pyrfc- built from Container to Cloud9 folder. We will use this file later to upload to S3.
 ```bash
 # Copy .whl out of docker to cloud9. Remember to replace your Container ID
 # and re-confirm the pyrfc file name again to match with your container
-docker cp <Container ID>:/root/wheel_dir/pyrfc-2.8.31-cp37-cp37m-linux_x86_64.whl .
+docker cp <Container ID>:/root/wheel_dir/ .
 ```
 ![1.dockercp](./guidanceImage/1.dockercp.png)
 
-Use the following command to upload the created **.whl** file to Amazon S3. Note: Modify the **file name, bucket name** and **folder name** according to your environment! 
+Use the following command to upload **.whl** file with file name started with pyrfc- to Amazon S3. Note: Modify the **bucket name** and **folder name** according to your environment! 
 ```bash
-aws s3 cp pyrfc-2.8.31-cp37-cp37m-linux_x86_64.whl s3://<bucket name>/<folder name>/
+aws s3 cp ./wheel_dir/pyrfc*.whl s3://<bucket name>/<folder name>/
 ```
 ![1.s3cp](./guidanceImage/1.s3cp.png)
 
@@ -207,8 +207,6 @@ Click **Save** to create the job and now you can **Run** the job
 Finally, navigate to your Amazon S3 bucket and validate the extracted file. 
 
 ![3.s3extracteddata](./guidanceImage/3.s3extracteddata.png)
-
-## 
 
 ## Security
 
