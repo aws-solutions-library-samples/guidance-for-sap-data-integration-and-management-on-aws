@@ -49,7 +49,6 @@ dataS3file = tableName+"."+fileFormat
 dataS3Folder_err = "glue/result-err/"+fileFormat+"/"+tableName+"/"+datetimestring+"/"
 dataS3file_err = tableName+"-err"+"."+fileFormat
 
-
 # ---------------------------------
 # 3.1 Function - Main Function
 # ---------------------------------
@@ -101,7 +100,6 @@ def _get_sap_connection(secret_name, region_name):
     ## 3.2.2 Get Secret Value 
     get_secret_value_response = secretclient.get_secret_value(SecretId=secret_name)
     sapauth = json.loads(get_secret_value_response['SecretString'])
-    print(get_secret_value_response)
 
     ## 3.2.3 Exception 
     if get_secret_value_response['ResponseMetadata']['HTTPStatusCode'] != 200:

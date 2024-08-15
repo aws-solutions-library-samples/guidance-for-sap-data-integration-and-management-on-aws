@@ -1,16 +1,48 @@
 # SAP RFC to S3 using AWS Glue
 
-In this lab, you will learn how to perform a SAP Remote Function Call (RFC) via AWS Glue and store the output in Amazon S3. The architecture will be as following.
+In this lab, we will learn how to perform a SAP Remote Function Call (RFC) via AWS Glue and store the output in Amazon S3. The architecture will be as following.
+
+## Table of Contents
+
+1. [Overview](#1-overview)
+    - 1.1.[Cost](#11-cost)
+2. [Prerequisites](#2-prerequisites)
+    - 2.1.[Build PyRFC as an additional Python module for Glue](#21-build-pyrfc-as-an-additional-python-module-for-glue)
+3. [Deployment Steps](#3-deployment-steps)
+    - 3.1.[Preparation steps](#31-preparation-steps)
+    - 3.2.[CloudFormation template deployment](#32-cloudformation-template-deployment)
+4. [Deployment Validation](#4-deployment-validation)
+5. [Running the Guidance](#5-running-the-guidance)
+6. [Next Steps](#6-next-steps)
+7. [Cleanup](#7-cleanup)
+
+## 1. Overview 
+
+For users who want to extract data from SAP and transfer it to AWS data lake on top of Amazon S3, but have technical limitations to use [SAP OData connector for Amazon AppFlow](https://docs.aws.amazon.com/appflow/latest/userguide/sapodata.html) (such as using the lower version than SAP NW 7.4 or having difficulty setting up SAP OData), We will learn how to extract data from AWS Glue by connecting to SAP with SAP RFC.
 
 ![0.gluepyrfcarchitecture](./guidanceImage/0.gluepyrfcarchitecture.png)
 
-For ease of use, we will be using [AWS Cloud9](https://catalog.us-east-1.prod.workshops.aws/workshops/79435b9d-cf2e-4afc-a3f6-4eceeaf0865d/en-US/aws-devops/200-sap-cicd-cf/211-aws-cloud9) as IDE.
-Please make sure to:
-* Create your [AWS Cloud9](https://catalog.us-east-1.prod.workshops.aws/workshops/79435b9d-cf2e-4afc-a3f6-4eceeaf0865d/en-US/aws-devops/200-sap-cicd-cf/211-aws-cloud9) environment before starting the workshop.
-* The docker image will take about 2~3GB disk size. So please make sure your Cloud9 environment has enough storage size. 
-You can provision a sufficent storage size (for Example 15GB or 20GB) when creating Cloud9, or refer to [this link](https://docs.aws.amazon.com/cloud9/latest/user-guide/move-environment.html) to extend the EBS size of an existing environment.
+### 1.1. Cost
+With AWS Glue, you only pay for the time that your ETL job takes to run. There are no resources to manage and no upfront costs, and you are not charged for startup or shutdown time. AWS charges an hourly rate based on the number of data processing units (DPUs) used to run your ETL job. We will use the below properties related with [Glue job cost](https://aws.amazon.com/glue/pricing/?nc1=h_ls).
 
-## 1. Build PyRFC as External Library for Glue
+- Job type : **Spark**
+- Glue version : **Glue 3.0**
+- Worker type: **G.1x**
+- Requested number of workers: **2**
+
+The price varies by AWS region, but is **$0.44 per DPU-Hour** for running a Glue job in us-east-1. Consider a job that runs for **15 minutes** and uses **6 DPU**. Since your job ran for 1/4th of an hour and used 6 DPUs, AWS will bill you 6 DPU * 1/4 hour * $0.44, or $0.66. Depending on the size of your table, the job execution time and DPUs required can vary, so we recommend that you refer to [Monitoring DPU Capacity Planning](https://docs.aws.amazon.com/glue/latest/dg/monitor-debug-capacity.html) to estimate DPU requirements for your job.
+
+- [AWS Glue Pricing](https://aws.amazon.com/glue/pricing/?nc1=h_ls)
+- [Monitoring for DPU capacity planning](https://docs.aws.amazon.com/glue/latest/dg/monitor-debug-capacity.html)
+
+## 2. Prerequisites
+
+The [pyrfc](https://github.com/SAP/PyRFC) Python package provides Python bindings for SAP NetWeaver RFC Library, for a comfortable way of calling ABAP modules from Python and Python modules from ABAP, via SAP Remote Function Call (RFC) protocol.
+
+- With AWS Glue version 2.0+, you can install additional Python modules. To add a new module, **--additional-python-modules** job parameter key with a value containing a list of comma-separated Python modules. This allows your AWS Glue 2.0 ETL job to install the additional modules using the Python package installer (pip3)
+
+
+### 2.1. Build PyRFC as an additional Python module for Glue
 
 To access SAP via RFC from AWS Glue, the [PyRFC](https://github.com/SAP/PyRFC) library needs to be installed as [external library](https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-python-libraries.html) in Glue following [this guide](https://repost.aws/knowledge-center/glue-version2-external-python-libraries) (AWS Glue 3.0 External library build).
 
@@ -42,8 +74,10 @@ Move to gluerfcbuild folder as the next commands need to be run inside this fold
 
 Download the following docker file template from github to build the external library. You can also manually download the **glue-pyrfc-docker** file from **glue_external_lib** folder from [Github repository](https://github.com/aws-samples/aws-sap-gluerfc/blob/main/glue_external_lib/glue-pyrfc-docker), then manually upload to your Cloud9 environment.
 Commands in the docker file shall be used without modification.
+
 ```bash
-curl -L -O https://github.com/aws-samples/aws-sap-gluerfc/blob/main/glue_external_lib/glue-pyrfc-docker
+git clone https://github.com/aws-samples/aws-sap-gluerfc.git
+cp -pr ./aws-sap-gluerfc/glue_external_lib/glue-pyrfc-docker .
 ```
 
 Build the image using the docker file: 
@@ -101,7 +135,22 @@ aws s3 cp ./wheel_dir/pyrfc*.whl s3://<bucket name>/<folder name>/
 
 ![1.s3bucketwhlfile](./guidanceImage/1.s3bucketwhlfile.png)
 
-## 2. Create Secrets Manager to save SAP connection information securely
+## 3. Deployment Steps
+
+We will create a secret of [AWS Secret Manager](https://aws.amazon.com/secrets-manager/?nc1=h_ls) to save the SAP connection information and deploy AWS Glue job using AWS CloudFormation.
+
+### 3.1. Preparation steps:
+
+The script of AWS Gloud job is [pyrfc_read_table.py](https://github.com/aws-samples/aws-sap-gluerfc/blob/main/pyrfc_read_table/pyrfc_read_table.py) inside folder pyrfc_read_table. We need to upload it to an Amazon S3 bucket to automatically deploy the Glue job through CloudFormation. You can create new S3 bucket or re-use the bucket above used to upload .whl file.
+
+```bash
+aws s3 cp ./aws-sap-gluerfc/pyrfc_read_table/pyrfc_read_table.py s3://<bucket name>/<folder name>/
+```
+
+[Github repository](https://github.com/aws-samples/aws-sap-gluerfc/blob/main/pyrfc_read_table/pyrfc_read_table.py)
+
+![2.s3bucketpycodefile](./guidanceImage/2.s3bucketpycodefile.png)
+
 Access [Secret Manager](https://ap-northeast-1.console.aws.amazon.com/secretsmanager/landing?region=ap-northeast-1) service and click **Store a new secret** .
 
 ![2.newsecret](./guidanceImage/2.newsecret.png)
@@ -122,44 +171,40 @@ In the **Next** screen, leave all fields as default and finally click **Store se
 
 ![2.configuresecret](./guidanceImage/2.configuresecret.png)
 
+When successfuly create Secret Manager, review it and Copy the **Secret ARN** to input to CloudFormation later.
+
 ![2.reviewsecret](./guidanceImage/2.reviewsecret.png)
 
-## 3. Create AWS Glue job
+### 3.2. CloudFormation template deployment:
+Go to [CloudFormation console](https://ap-northeast-1.console.aws.amazon.com/cloudformation/home?region=ap-northeast-1#/getting-started) and Click **Creat Stack**
 
-Create a custom Glue job to perform the SAP RFC call using the external library.
+From **Specify template**, choose **Upload a template file**, then upload the **glue-py-rfc.yaml** file inside folder automation.
 
-Access [AWS Glue Studio](https://us-east-1.console.aws.amazon.com/gluestudio/home) console.
+![2.cloudformationupload](./guidanceImage/2.cloudformationupload.png)
 
-To access your SAP system in a particular existing VPC, create a new **connection** at the bottom of the **Connectors** menu. After entering the options below, click the **Create connection** button to create a **connection**.
-* Name : < Connection Name >
-* Network options 
-    * VPC : < Your SAP VPC >
-    * Subnet : < ... >
-    * Security Group : < ... > 
+Click **Next** and input the parameters with your own environment values
+
+![2.cloudformationinput](./guidanceImage/2.cloudformationinput.png)
+
+Click **Next** to go through the screens to the last **Review and create** screen. In the bottom of the page, click in the check box "I acknowledge that AWS CloudFormation might create IAM resources with custom names." and **Submit** to start deployment
+
+![2.cloudformationlast](./guidanceImage/2.cloudformationlast.png)
+
+## 4. Deployment Validation
+
+We will see the status of AWS CloudFormation stack to validate AWS Glue job deployment. If the status is **CREATE_COMPLETE**, it does mean successfully deploying it.
+    ![2.cloudformationstatus](./guidanceImage/4.CloudFormationStackStatus.png)
 
 
-![3.gluecreateconnection](./guidanceImage/3.gluecreateconnection.png)
+See the resources deployed including IAM role for Glue job, Glue VPC Connection, Glue Job.
+    ![2.cloudformationresources](./guidanceImage/2.cloudformationresources.png)
 
-![3.gluenetworkconnection](./guidanceImage/3.gluenetworkconnection.png)
+And access [AWS Glue Studio](https://us-east-1.console.aws.amazon.com/gluestudio/home) console. From left menu select Connectors, we can confirm the VPC Connector deployed by CloudFormation.
+    ![3.gluesapvpcconnectorconfirm](./guidanceImage/3.gluesapvpcconnectorconfirm.png)
 
-![3.gluenetworkconnectionname](./guidanceImage/3.gluenetworkconnectionname.png)
+## 5. Running the Guidance
 
-![3.glueconnectiondetails](./guidanceImage/3.glueconnectiondetails.png)
-
-![3.glueconnectionreview](./guidanceImage/3.glueconnectionreview.png)
-
-![3.gluesapvpcconnectorconfirm](./guidanceImage/3.gluesapvpcconnectorconfirm.png)
-
-After create your VPC Connection, Goto **ETL Jobs** in the Menu, choose **Script editor**
-
-![3.gluejobnewjob](./guidanceImage/3.gluejobnewjob.png)
-
-Choose **Spark** Engine, and click **Create script**.
-
-![3.gluejobselectengine](./guidanceImage/3.gluejobselectengine.png)
-
-In the Editor screen, define **Job name**, and Copy the code from **pyrfc_read_table.py** inside folder **pyrfc_read_table** in the [Github repository](https://github.com/aws-samples/aws-sap-gluerfc/blob/main/pyrfc_read_table/pyrfc_read_table.py) to the script window.
-For your reference, **pyrfc_read_table.py** code logic is as follow:
+In the glue job's Editor screen you can confirm the code of the job deployed by CloudFormation. For your reference, [pyrfc_read_table.py](https://github.com/aws-samples/aws-sap-gluerfc/blob/main/pyrfc_read_table/pyrfc_read_table.py) code logic is as follow:
 
 1. Setup Parameter: Define Secret Manager name and region, Amazon S3 Bucket to save extracted data, Output file format, Table name to extracted from SAP and other options. You should adjust these parameters with your own values before running the job.
 2. List of fixed parameter: RFC function to read table, and Amazon S3 folder/subfolder format using job execution datetime. You don't need to modify this to run the job.
@@ -179,34 +224,42 @@ For your reference, **pyrfc_read_table.py** code logic is as follow:
 
 4. Main program: Execute main function 3.1
 
-Please make sure modify the parameters that as marked as **#Adjust** for Secret Manager name, region, S3 bucket name, Table.
+Please make sure modify the parameters that as marked as **#Adjust** to meet your own environment values.
+- Secret Manager name
+- AWS region
+- S3 bucket name to store extracted data
+- Target table name to be extracted
+- You can also adjust rowCount if necessary
 
 ![3.gluejobscript](./guidanceImage/3.gluejobscript.png)
 
-Next, click on the Job details tab, to specify connection, IAM Role and Job parameter to pass the external Library as follows:
-
-* Name: < Pick a Name >
-* IAM Role: < Glue role with required permissions > (cf. Create an IAM role for AWS Glue )
-    * This should include access to Amazon S3 and **SecretsManagerReadWrite**
-
-    ![3.gluejobiamrole](./guidanceImage/3.gluejobiamrole.png)
-
-* Glue version: Glue 3.0
-* Advanced properties are as following. Please confirm and adjust .whl file name to match with your environment if necessary.
-    * Connections: Select the connection you created.
-    * Click Add new parameter in Job parameters and enter as below.
-    * Key: --additional-python-modules
-    * Value: s3://< bucket name >/< folder name >/**pyrfc-2.8.31-cp37-cp37m-linux_x86_64.whl**
-
-    ![3.gluejobparameters](./guidanceImage/3.gluejobparameters.png)
-
-Click **Save** to create the job and now you can **Run** the job
+Click **Save** to save the parameters you modified and now you can **Run** the job
 
 ![3.gluejobsaveandrun](./guidanceImage/3.gluejobsaveandrun.png)
 
 Finally, navigate to your Amazon S3 bucket and validate the extracted file. 
 
 ![3.s3extracteddata](./guidanceImage/3.s3extracteddata.png)
+
+
+## 6. Next Steps
+
+We can also monitor the ouput logs of Glue job and know how many extracted rows in the table which you selected. 
+
+- If we look the **Run details** under the run tab of the glue job, we'll see the  link of CloudWatch Ouput logs. 
+![6.outputlogs](./guidanceImage/6.nextstep-outputlogs.png)
+
+- Click the Log stream and we can see output of Glue job.
+![6.outputlogstream](./guidanceImage/6.nextstep-outlogstream.png)
+![6.result](./guidanceImage/6.nextstep-result.png)
+
+
+## 7. Cleanup
+
+To cleanup resources we created, We will delete the CloudFormation Stack.
+
+- Go to [CloudFormation console](https://ap-northeast-1.console.aws.amazon.com/cloudformation/home?region=ap-northeast-1#/getting-started), select the Stack which we created before and click **Delete** button. And Click **Delete** button again.
+![7.cleanup-cloudformation](./guidanceImage/7.cleanup-cloudformation.png)
 
 ## Security
 

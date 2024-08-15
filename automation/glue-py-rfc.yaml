@@ -1,0 +1,179 @@
+AWSTemplateFormatVersion: '2010-09-09'
+# Template to setup Glue job using PyRFC to extract SAP Data via Glue VPC Connection. Credential data will be saved in Secret Manager
+Parameters:
+  GlueJobName:
+    Type: String
+    Default: GluePyRFCJob_SAP
+    Description: 'Name of the Glue Job to Deploy to extract SAP Data via RFC'
+  
+  S3LinkforPyRFCLib:
+    Type: String
+    Default: 's3://sapdemo-extractglue/pyrfcv2/pyrfc-2.8.31-cp37-cp37m-linux_x86_64.whl'
+    Description: Update the Link to the PyRFC Library uploaded to S3 bucket
+
+  AvailabilityZoneforGluepyRFC:
+    Type: String
+    Default: Availability Zone to connect to your SAP system for Example ap-northeast-1a
+    Description: 'Availability Zone (Ex: ap-northeast-1a)'
+  
+  SAPVPCSubnetforGluepyRFC:
+    Type: String
+    Default: VPC Subnet ID to connect to your SAP system
+    Description: 'SAP VPC Subnet ID'
+   
+  SAPVPCSecurityGroupforGluepyRFC:
+    Type: String
+    Default: Security Groups to attach to your Glue VPC Connection in VPC
+    Description: 'Security group for Glue VPC Connection'
+
+  PyRFCCode:
+    Type: String
+    Description: 'Script path - S3 location of the script'
+    Default: s3://sapdemo-extractglue/gluepyrfccode/pyrfc_read_table.py
+
+  SecretManagerARN:
+    Type: String
+    Description: 'ARN of the Secret Manager created for SAP connection information.'
+    Default: 'arn:aws:secretsmanager:<Region>:<AccountID>:secret:<your secret name and specific text>'
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: S3 bucket for Glue library and job script. Please adjust with your environment values.
+        Parameters:
+          - S3LinkforPyRFCLib
+          - PyRFCCode
+      - Label:
+          default: Secret Manager that is storing SAP connection values. Please adjust with your environment values.
+        Parameters:
+          - SecretManagerARN
+      - Label:
+          default: Input data to create AWS Glue VPC Connection and Glue job. Please adjust with your values. (IAM role will be created automatically)
+        Parameters:
+          - GlueJobName
+          - AvailabilityZoneforGluepyRFC
+          - SAPVPCSubnetforGluepyRFC
+          - SAPVPCSecurityGroupforGluepyRFC
+
+Resources:
+  GlueJobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'GluePyRFC-JobRole-${AWS::AccountId}'
+      Description: Role for Glue PyRFC Job to Extract data from SAP
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - glue.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: '/'
+      Policies:
+        - PolicyName: !Sub 'GluePyRFC-JobRole-${AWS::AccountId}-secret'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref SecretManagerARN
+        - PolicyName: !Sub 'GluePyRFC-JobRole-${AWS::AccountId}-logs'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: 'arn:aws:logs:*:*:*:/aws-glue/*'
+        - PolicyName: !Sub 'GluePyRFC-JobRole-${AWS::AccountId}-s3'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:CreateBucket
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                Resource: 
+                  - 'arn:aws:s3:::*'
+                  - 'arn:aws:s3:::*/*'
+        - PolicyName: !Sub 'GluePyRFC-JobRole-${AWS::AccountId}-gluejob'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                  - ec2:DescribeVpcEndpoints
+                  - ec2:DescribeRouteTables
+                  - ec2:CreateNetworkInterface
+                  - ec2:DeleteNetworkInterface
+                  - ec2:DescribeNetworkInterfaces
+                  - ec2:DescribeSecurityGroups
+                  - ec2:DescribeSubnets
+                  - ec2:DescribeVpcAttribute
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - glue:CreateJob
+                  - glue:GetConnection
+                  - glue:CreateScript
+                Resource:
+                  - !Sub 'arn:aws:glue:*:${AWS::AccountId}:catalog'
+                  - !Sub 'arn:aws:glue:*:${AWS::AccountId}:connection/*'
+                  - !Sub 'arn:aws:glue:*:${AWS::AccountId}:job/*'
+                  - !Sub 'arn:aws:glue:*:${AWS::AccountId}:script/*'
+              - Effect: Allow
+                Action:
+                  - ec2:CreateTags
+                  - ec2:DeleteTags
+                Resource:
+                  - 'arn:aws:ec2:*:*:network-interface/*'   
+
+  GlueVPCConnection:
+    Type: AWS::Glue::Connection
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      ConnectionInput:
+        Description: 'VPC connection to SAP'
+        ConnectionType: "NETWORK"
+        PhysicalConnectionRequirements:
+          SecurityGroupIdList:
+            - !Ref SAPVPCSecurityGroupforGluepyRFC
+          SubnetId: !Ref SAPVPCSubnetforGluepyRFC
+          AvailabilityZone: !Ref AvailabilityZoneforGluepyRFC
+        Name:  !Sub 'SAPVPCConnectorforPyRFC-${AWS::AccountId}'
+  
+  # Still updating 
+  GluePyRFCJob:
+    Type: AWS::Glue::Job
+    Properties:
+      GlueVersion: '3.0'
+      Name: !Ref GlueJobName
+      Role: !Ref GlueJobRole
+      Command:
+        Name: glueetl
+        PythonVersion: '3'
+        ScriptLocation: !Ref PyRFCCode
+      DefaultArguments:
+        --additional-python-modules: !Ref S3LinkforPyRFCLib
+      ExecutionProperty:
+        MaxConcurrentRuns: 2
+      MaxRetries: 1
+      WorkerType: G.1X
+      NumberOfWorkers: 2
+      Timeout: 2880
+      Connections:
+        Connections:
+          - !Ref GlueVPCConnection
+    DependsOn:
+      - GlueVPCConnection
+      - GlueJobRole
