@@ -41,6 +41,9 @@ The [pyrfc](https://github.com/SAP/PyRFC) Python package provides Python binding
 
 - With AWS Glue version 2.0+, you can install additional Python modules. To add a new module, **--additional-python-modules** job parameter key with a value containing a list of comma-separated Python modules. This allows your AWS Glue 2.0 ETL job to install the additional modules using the Python package installer (pip3)
 
+- We will use docker to build the additional python module. For your convenience, we recommend installing docker on your Amazon EC2 environment and then proceed with the steps below. Please refer to the link below to install docker.
+    - [Installing Docker](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-docker.html)
+
 
 ### 2.1. Build PyRFC as an additional Python module for Glue
 
@@ -51,11 +54,11 @@ To begin, download the [SAP NW RFC SDK](https://launchpad.support.sap.com/#/soft
 
 ![1.nwrfcdownload](./guidanceImage/1.nwrfcdownload.png)
 
-Access your AWS Cloud9 Studio, Upload the downloaded zip file your AWS Cloud9 environment. The zip file will placed in the folder as bellow.
+Access your OS envrionment, Upload the downloaded zip file your AWS Cloud9 environment. The zip file will placed in the folder as bellow.
 
 ![1.cloud9uploadnwrfc](./guidanceImage/1.cloud9uploadnwrfc.png)
 
-Extract all files by executing the following statements in your Cloud9 terminal.  
+Extract all files by executing the following statements in your OS envrionment.
 
 ```bash
 cd /home/ec2-user/environment
