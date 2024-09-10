@@ -4,63 +4,69 @@ Parameters:
   GlueJobName:
     Type: String
     Default: GluePyRFCJob_SAP
-    Description: 'Name of the Glue Job to Deploy to extract SAP Data via RFC'
+    Description: Name of the Glue Job to Deploy to extract SAP Data via RFC
   
   S3LinkforPyRFCLib:
     Type: String
-    Default: 's3://sapdemo-extractglue/pyrfcv2/pyrfc-2.8.31-cp37-cp37m-linux_x86_64.whl'
-    Description: Update the Link to the PyRFC Library uploaded to S3 bucket
+    Default: ''
+    Description: The S3 URI to the PyRFC Library uploaded to S3 bucket. (e.g. s3://<S3bucket>/<prefix>/<Your whl file name>)
 
   AvailabilityZoneforGluepyRFC:
     Type: String
-    Default: Availability Zone to connect to your SAP system for Example ap-northeast-1a
-    Description: 'Availability Zone (Ex: ap-northeast-1a)'
+    Default: ''
+    Description: Availability Zone (e.g. ap-northeast-1a)
   
   SAPVPCSubnetforGluepyRFC:
     Type: String
-    Default: VPC Subnet ID to connect to your SAP system
-    Description: 'SAP VPC Subnet ID'
+    Default: ''
+    Description: Subnet ID for Glue Network Connection (e.g subnet-xxxxxxx)
    
   SAPVPCSecurityGroupforGluepyRFC:
     Type: String
-    Default: Security Groups to attach to your Glue VPC Connection in VPC
-    Description: 'Security group for Glue VPC Connection'
+    Default: ''
+    Description: Security group ID for Glue Network Connection (e.g sg-xxxxxxx)
 
   PyRFCCode:
     Type: String
-    Description: 'Script path - S3 location of the script'
-    Default: s3://sapdemo-extractglue/gluepyrfccode/pyrfc_read_table.py
-
+    Default: ''
+    Description: The S3 URI to the PyRFC script uploaded to S3 bucket. (e.g. s3://<your s3 bucket>/<prefix if you has>/pyrfc_read_table.py)
+    
   SecretManagerARN:
     Type: String
-    Description: 'ARN of the Secret Manager created for SAP connection information.'
-    Default: 'arn:aws:secretsmanager:<Region>:<AccountID>:secret:<your secret name and specific text>'
+    Default: ''
+    Description: ARN of the Secret Manager created for SAP connection information. (e.g. arn:aws:secretsmanager:<Region>:<AccountID>:secret:<your secret name and specific text>)
+    
+  DataS3Bucket:
+    Type: String
+    Default: ''
+    Description: The S3 bucket name which will be saved extracted data from SAP.
 
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
-      - Label:
-          default: S3 bucket for Glue library and job script. Please adjust with your environment values.
+      - Label: 
+          default: AWS Glue Additional Library and Job Script setting information.
         Parameters:
           - S3LinkforPyRFCLib
           - PyRFCCode
-      - Label:
-          default: Secret Manager that is storing SAP connection values. Please adjust with your environment values.
+      - Label: 
+          default: AWS Secret Manager setting information.
         Parameters:
           - SecretManagerARN
-      - Label:
-          default: Input data to create AWS Glue VPC Connection and Glue job. Please adjust with your values. (IAM role will be created automatically)
+      - Label: 
+          default: AWS Glue Job and Network connection setting information.
         Parameters:
           - GlueJobName
           - AvailabilityZoneforGluepyRFC
           - SAPVPCSubnetforGluepyRFC
           - SAPVPCSecurityGroupforGluepyRFC
+          - DataS3Bucket
 
 Resources:
   GlueJobRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub 'GluePyRFC-JobRole-${AWS::AccountId}'
+      RoleName: !Sub '${GlueJobName}-JobRole-${AWS::AccountId}'
       Description: Role for Glue PyRFC Job to Extract data from SAP
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
@@ -73,7 +79,7 @@ Resources:
               - sts:AssumeRole
       Path: '/'
       Policies:
-        - PolicyName: !Sub 'GluePyRFC-JobRole-${AWS::AccountId}-secret'
+        - PolicyName: !Sub '${GlueJobName}-JobRole-${AWS::AccountId}-secret'
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -81,7 +87,7 @@ Resources:
                 Action:
                   - secretsmanager:GetSecretValue
                 Resource: !Ref SecretManagerARN
-        - PolicyName: !Sub 'GluePyRFC-JobRole-${AWS::AccountId}-logs'
+        - PolicyName: !Sub '${GlueJobName}-JobRole-${AWS::AccountId}-logs'
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -91,7 +97,7 @@ Resources:
                   - logs:CreateLogStream
                   - logs:PutLogEvents
                 Resource: 'arn:aws:logs:*:*:*:/aws-glue/*'
-        - PolicyName: !Sub 'GluePyRFC-JobRole-${AWS::AccountId}-s3'
+        - PolicyName: !Sub '${GlueJobName}-JobRole-${AWS::AccountId}-s3'
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -103,9 +109,9 @@ Resources:
                   - s3:DeleteObject
                   - s3:ListBucket
                 Resource: 
-                  - 'arn:aws:s3:::*'
-                  - 'arn:aws:s3:::*/*'
-        - PolicyName: !Sub 'GluePyRFC-JobRole-${AWS::AccountId}-gluejob'
+                  - !Sub "arn:aws:s3:::${DataS3Bucket}"
+                  - !Sub "arn:aws:s3:::${DataS3Bucket}/*"
+        - PolicyName: !Sub '${GlueJobName}-JobRole-${AWS::AccountId}-gluejob'
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -150,7 +156,7 @@ Resources:
             - !Ref SAPVPCSecurityGroupforGluepyRFC
           SubnetId: !Ref SAPVPCSubnetforGluepyRFC
           AvailabilityZone: !Ref AvailabilityZoneforGluepyRFC
-        Name:  !Sub 'SAPVPCConnectorforPyRFC-${AWS::AccountId}'
+        Name:  !Sub '${GlueJobName}-SAPConnection-${AWS::AccountId}'
   
   # Still updating 
   GluePyRFCJob:
