@@ -58,7 +58,7 @@ Access your OS envrionment, Upload the downloaded zip file your AWS Cloud9 envir
 
 ![1.cloud9uploadnwrfc](./guidanceImage/1.cloud9uploadnwrfc.png)
 
-Extract all files by executing the following statements in your OS envrionment.
+Extract all files by executing the following statements in your OS envrionment.  
 
 ```bash
 cd /home/ec2-user/environment
@@ -233,6 +233,8 @@ Please make sure modify the parameters that as marked as **#Adjust** to meet you
 - S3 bucket name to store extracted data
 - Target table name to be extracted
 - You can also adjust rowCount if necessary
+- On the Job details tab, check the **IAM Role** permissions.
+    - If you set the Glue additional Library, script bucket differently from the bucket where you stored SAP data, you need to add get permissions for each bucket to the IAM Role created from Cloudformation. Connect to the [IAM Role console](https://us-east-1.console.aws.amazon.com/iam/home?region=us-east-1#/roles), look up the **Glue Job Name** you entered, and update the permissions.
 
 ![3.gluejobscript](./guidanceImage/3.gluejobscript.png)
 
