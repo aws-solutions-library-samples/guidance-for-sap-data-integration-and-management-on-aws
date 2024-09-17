@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-# Template to setup Glue job using PyRFC to extract SAP Data via Glue VPC Connection. Credential data will be saved in Secret Manager
+Description: Template to setup Glue job using PyRFC to extract SAP Data via Glue VPC Connection (SO9103)
 Parameters:
   GlueJobName:
     Type: String
